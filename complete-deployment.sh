@@ -47,8 +47,9 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=true
 WorkingDirectory=/home/ec2-user/openclaw
-ExecStart=/bin/bash -c "cd /home/ec2-user/openclaw && docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d"
-ExecStop=/bin/bash -c "cd /home/ec2-user/openclaw && docker compose -f docker-compose.yml -f docker-compose.aws.yml down"
+Environment="PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+ExecStart=/bin/bash -c "cd /home/ec2-user/openclaw && /usr/bin/docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d || /usr/local/bin/docker-compose -f docker-compose.yml -f docker-compose.aws.yml up -d"
+ExecStop=/bin/bash -c "cd /home/ec2-user/openclaw && /usr/bin/docker compose -f docker-compose.yml -f docker-compose.aws.yml down || /usr/local/bin/docker-compose -f docker-compose.yml -f docker-compose.aws.yml down"
 TimeoutStartSec=0
 Restart=always
 RestartSec=10
