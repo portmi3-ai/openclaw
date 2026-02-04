@@ -100,8 +100,13 @@ else
 fi
 
 if ! docker compose version >/dev/null 2>&1; then
-    log_info "Docker Compose plugin missing. Installing..."
-    sudo dnf install -y docker-compose-plugin || true
+    if grep -q "Amazon Linux 2023" /etc/os-release 2>/dev/null; then
+        log_info "Docker Compose is bundled with Docker on Amazon Linux 2023"
+        log_info "Ensure Docker is up to date"
+    else
+        log_info "Docker Compose plugin missing. Installing..."
+        sudo dnf install -y docker-compose-plugin || true
+    fi
 fi
 
 if ! sudo systemctl is-active --quiet docker; then
