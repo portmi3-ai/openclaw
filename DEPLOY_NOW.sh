@@ -83,7 +83,7 @@ if ! command -v docker >/dev/null 2>&1; then
     if grep -q "Amazon Linux 2023" /etc/os-release 2>/dev/null; then
         log_info "Using dnf installer for Amazon Linux 2023"
         sudo dnf update -y
-        sudo dnf install -y docker docker-compose-plugin
+        sudo dnf install -y docker
     else
         log_info "Using Docker convenience script"
         curl -fsSL https://get.docker.com | sh
