@@ -31,6 +31,10 @@ INSTANCE_IP="3.139.76.200"
 INSTANCE_DNS="ec2-3-139-76-200.us-east-2.compute.amazonaws.com"
 
 log_info "Starting complete deployment setup..."
+log_info ""
+log_info "NOTE: This script sets up systemd, CloudWatch, and Nginx."
+log_info "OpenClaw containers must be built first using deploy-aws.sh or docker-setup.sh"
+log_info ""
 
 # ============================================================================
 # PART 1: systemd Watchdog (Auto-restart)

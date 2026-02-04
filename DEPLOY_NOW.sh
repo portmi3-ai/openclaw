@@ -123,9 +123,34 @@ EOF
 fi
 
 # ============================================================================
-# STEP 3: Run complete deployment script
+# STEP 3: Build and start OpenClaw (if not already running)
 # ============================================================================
-log_step "Step 3: Running complete deployment (systemd, CloudWatch, Nginx)..."
+log_step "Step 3: Building and starting OpenClaw..."
+
+if docker ps | grep -q openclaw-gateway; then
+    log_info "OpenClaw container already running"
+else
+    log_info "OpenClaw not running. Building and starting..."
+    
+    # Check if we have docker-setup.sh or deploy-aws.sh
+    if [ -f "docker-setup.sh" ]; then
+        log_info "Using docker-setup.sh to build and start OpenClaw..."
+        chmod +x docker-setup.sh
+        ./docker-setup.sh
+    elif [ -f "deploy-aws.sh" ]; then
+        log_info "Using deploy-aws.sh to build and start OpenClaw..."
+        chmod +x deploy-aws.sh
+        ./deploy-aws.sh --skip-discord --skip-openai
+    else
+        log_warn "No build script found. You may need to build OpenClaw manually."
+        log_warn "Run: ./docker-setup.sh or ./deploy-aws.sh"
+    fi
+fi
+
+# ============================================================================
+# STEP 4: Run complete deployment script (systemd, CloudWatch, Nginx)
+# ============================================================================
+log_step "Step 4: Running complete deployment (systemd, CloudWatch, Nginx)..."
 
 if [ -f "complete-deployment.sh" ]; then
     chmod +x complete-deployment.sh
@@ -138,9 +163,9 @@ else
 fi
 
 # ============================================================================
-# STEP 4: Final verification
+# STEP 5: Final verification
 # ============================================================================
-log_step "Step 4: Final verification..."
+log_step "Step 5: Final verification..."
 echo ""
 
 # Check all services
