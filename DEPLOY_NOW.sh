@@ -77,37 +77,31 @@ fi
 # ============================================================================
 log_step "Step 2: Checking Docker..."
 
-if ! command -v docker &> /dev/null; then
-    log_info "Installing Docker..."
-    
-    # Amazon Linux 2023 uses dnf
-    if command -v dnf &> /dev/null; then
-        log_info "Detected dnf package manager (Amazon Linux 2023)"
+if ! command -v docker >/dev/null 2>&1; then
+    log_info "Docker not found. Installing Docker..."
+
+    if grep -q "Amazon Linux 2023" /etc/os-release 2>/dev/null; then
+        log_info "Using dnf installer for Amazon Linux 2023"
         sudo dnf update -y
-        sudo dnf install -y docker
-        # Install docker-compose separately (plugin may not be available in AL2023)
-        if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null 2>&1; then
-            log_info "Installing docker-compose..."
-            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-                -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-        fi
-        sudo systemctl enable docker
-        sudo systemctl start docker
-        sudo usermod -aG docker "$USER" || true
-        log_info "Docker installed via dnf. You may need to log out/in for group changes."
+        sudo dnf install -y docker docker-compose-plugin
     else
-        # Fallback to official script for other distributions
-        log_info "Using official Docker install script..."
-        curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-        sudo sh /tmp/get-docker.sh
-        sudo usermod -aG docker "$USER"
-        sudo systemctl enable docker
-        sudo systemctl start docker
-        log_info "Docker installed. You may need to log out/in for group changes."
+        log_info "Using Docker convenience script"
+        curl -fsSL https://get.docker.com | sh
     fi
+
+    sudo systemctl enable docker
+    sudo systemctl start docker
+    sudo usermod -aG docker ec2-user
+
+    log_info "Docker installation complete."
+    log_info "NOTE: You must log out and back in for docker group permissions to apply."
 else
     log_info "Docker already installed"
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+    log_info "Docker Compose plugin missing. Installing..."
+    sudo dnf install -y docker-compose-plugin || true
 fi
 
 if ! sudo systemctl is-active --quiet docker; then
