@@ -23,6 +23,33 @@ cd "$OPENCLAW_DIR" || {
     exit 1
 }
 
+# Create required directories
+log_info "Creating required directories..."
+mkdir -p /home/ec2-user/.openclaw/config
+mkdir -p /home/ec2-user/.openclaw/workspace
+
+# Create minimal .env if it doesn't exist
+if [ ! -f "$OPENCLAW_DIR/.env" ]; then
+    log_info "Creating minimal .env file..."
+    cat > "$OPENCLAW_DIR/.env" << 'EOF'
+# OpenClaw Environment Configuration
+# Required: Volume paths for Docker Compose
+OPENCLAW_CONFIG_DIR=/home/ec2-user/.openclaw/config
+OPENCLAW_WORKSPACE_DIR=/home/ec2-user/.openclaw/workspace
+
+# Required: Gateway token (generate with: openssl rand -hex 32)
+OPENCLAW_GATEWAY_TOKEN=
+
+# Optional: Claude AI configuration (can be blank for now)
+CLAUDE_AI_SESSION_KEY=
+CLAUDE_WEB_SESSION_KEY=
+CLAUDE_WEB_COOKIE=
+EOF
+    log_info "Created .env file. You may need to set OPENCLAW_GATEWAY_TOKEN"
+else
+    log_info ".env file already exists"
+fi
+
 # ============================================================================
 # Install systemd unit from template
 # ============================================================================
