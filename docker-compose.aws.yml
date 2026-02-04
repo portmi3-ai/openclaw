@@ -1,0 +1,46 @@
+# Docker Compose override for AWS deployment
+# This file extends docker-compose.yml with AWS-specific settings
+# Usage: docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d
+
+version: '3.8'
+
+services:
+  openclaw-gateway:
+    environment:
+      # AWS-specific: Bind to all interfaces for external access
+      OPENCLAW_GATEWAY_BIND: ${OPENCLAW_GATEWAY_BIND:-0.0.0.0}
+      # Add OpenAI API key to environment
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Add Discord bot token to environment
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+    # AWS-specific: Ensure restart policy
+    restart: always
+    # AWS-specific: Add healthcheck
+    healthcheck:
+      test: ["CMD", "node", "dist/index.js", "health", "--token", "${OPENCLAW_GATEWAY_TOKEN}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # AWS-specific: Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # AWS-specific: Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  openclaw-cli:
+    environment:
+      # Add OpenAI API key to CLI environment
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Add Discord bot token to CLI environment
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
