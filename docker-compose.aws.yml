@@ -13,8 +13,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Add Discord bot token to environment
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
-    # AWS-specific: Ensure restart policy
-    restart: always
+    # AWS-specific: Ensure restart policy (Docker handles auto-restart)
+    restart: unless-stopped
     # AWS-specific: Add healthcheck
     healthcheck:
       test: ["CMD", "node", "dist/index.js", "health", "--token", "${OPENCLAW_GATEWAY_TOKEN}"]
