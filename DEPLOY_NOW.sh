@@ -62,18 +62,27 @@ fi
 log_step "Step 2: Checking Docker..."
 
 if ! command -v docker &> /dev/null; then
-    log_info "Installing Docker for Amazon Linux 2023..."
+    log_info "Installing Docker..."
     
     # Amazon Linux 2023 uses dnf
     if command -v dnf &> /dev/null; then
+        log_info "Detected dnf package manager (Amazon Linux 2023)"
         sudo dnf update -y
-        sudo dnf install -y docker docker-compose-plugin
+        sudo dnf install -y docker
+        # Install docker-compose separately (plugin may not be available in AL2023)
+        if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null 2>&1; then
+            log_info "Installing docker-compose..."
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+                -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+        fi
         sudo systemctl enable docker
         sudo systemctl start docker
-        sudo usermod -aG docker "$USER"
+        sudo usermod -aG docker "$USER" || true
         log_info "Docker installed via dnf. You may need to log out/in for group changes."
     else
         # Fallback to official script for other distributions
+        log_info "Using official Docker install script..."
         curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
         sudo sh /tmp/get-docker.sh
         sudo usermod -aG docker "$USER"
