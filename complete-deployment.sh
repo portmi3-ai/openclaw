@@ -60,9 +60,9 @@ EOF
 
 systemctl daemon-reload
 systemctl enable openclaw
-systemctl start openclaw
 
 log_info "systemd watchdog installed and enabled ✓"
+log_warn "Service enabled but not started yet - OpenClaw needs to be built first"
 
 # ============================================================================
 # PART 2: CloudWatch Logging
