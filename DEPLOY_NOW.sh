@@ -35,6 +35,7 @@ log_step()  { echo -e "${BLUE}[STEP]${NC} $*"; }
 
 INSTANCE_IP="3.139.76.200"
 REPO_URL="https://github.com/portmi3-ai/openclaw.git"
+OPENCLAW_DIR="${OPENCLAW_DIR:-/home/ec2-user/openclaw}"
 
 log_step "=========================================="
 log_step "OpenClaw Complete Deployment"
