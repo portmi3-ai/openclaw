@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# One-Command Complete Deployment for OpenClaw on EC2
-# This script does EVERYTHING: pulls latest code, runs deployment, verifies
+# OpenClaw Supervisor Script (Long-Running)
+# This script runs as a systemd service to supervise OpenClaw containers.
+# It ensures containers are always running and handles restarts.
 # Run this ON THE EC2 INSTANCE: curl -fsSL https://raw.githubusercontent.com/portmi3-ai/openclaw/main/DEPLOY_NOW.sh | bash
 
 set -euo pipefail
@@ -257,3 +258,41 @@ if [ "$SERVICES_OK" = false ]; then
 fi
 
 log_info "All systems operational! 🎉"
+
+# ============================================================================
+# Supervisor Loop (Long-Running)
+# ============================================================================
+# This script runs as a systemd service, so we need to keep it alive
+# and monitor the containers. Systemd will restart this script if it exits.
+log_info ""
+log_info "Entering supervisor mode (monitoring containers)..."
+log_info "Press Ctrl+C or stop systemd service to exit"
+
+# Supervisor loop: check containers every 30 seconds
+while true; do
+    sleep 30
+    
+    # Check if containers are still running
+    if ! docker ps | grep -q openclaw-gateway; then
+        log_warn "OpenClaw container stopped! Attempting restart..."
+        
+        # Try to restart containers
+        cd "$OPENCLAW_DIR" || cd /home/ec2-user/openclaw || exit 1
+        
+        if [ -f "docker-compose.yml" ]; then
+            if command -v docker &> /dev/null && docker compose version >/dev/null 2>&1; then
+                docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d || true
+            elif command -v docker-compose &> /dev/null; then
+                docker-compose -f docker-compose.yml -f docker-compose.aws.yml up -d || true
+            fi
+        fi
+        
+        # Wait a bit and check again
+        sleep 10
+        if docker ps | grep -q openclaw-gateway; then
+            log_info "Container restarted successfully"
+        else
+            log_error "Failed to restart container"
+        fi
+    fi
+done

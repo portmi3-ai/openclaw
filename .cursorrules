@@ -1,0 +1,9 @@
+You are working on OpenClaw. The canonical system of record is openclaw/docs/OPENCLAW_CANONICAL_CONTEXT.md.
+
+HARD INVARIANT: systemd unit openclaw.service MUST be a long-running supervisor and MUST NOT use Type=oneshot nor RemainAfterExit.
+ExecStart MUST call DEPLOY_NOW.sh (or equivalent supervisor script), NOT `docker compose up -d` directly.
+
+Before any change that touches complete-deployment.sh, DEPLOY_NOW.sh, or any systemd unit template:
+- You MUST run the repo validator script: scripts/validate_openclaw_systemd_unit.sh
+- You MUST ensure CI passes.
+- If the validator fails, you MUST fix the generator/template, not "work around" by deleting unit files on the server.

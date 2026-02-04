@@ -1,0 +1,16 @@
+name: OpenClaw Invariants
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  systemd-invariant:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate systemd unit invariant
+        run: |
+          chmod +x scripts/validate_openclaw_systemd_unit.sh
+          scripts/validate_openclaw_systemd_unit.sh systemd/openclaw.service.template

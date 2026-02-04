@@ -41,29 +41,30 @@ log_info ""
 # ============================================================================
 log_info "Installing systemd watchdog service..."
 
-cat > /etc/systemd/system/openclaw.service << 'EOF'
-[Unit]
-Description=OpenClaw Gateway
-After=docker.service
-Requires=docker.service
+# Validate the template before installing
+if [ -f "scripts/validate_openclaw_systemd_unit.sh" ]; then
+    chmod +x scripts/validate_openclaw_systemd_unit.sh
+    if ! ./scripts/validate_openclaw_systemd_unit.sh systemd/openclaw.service.template; then
+        log_error "Systemd unit template validation failed!"
+        exit 1
+    fi
+    log_info "Systemd unit template validated ✓"
+else
+    log_warn "Validator script not found, skipping validation"
+fi
 
-[Service]
-Type=oneshot
-RemainAfterExit=true
-WorkingDirectory=/home/ec2-user/openclaw
-Environment="PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
-ExecStart=/bin/bash -c "cd /home/ec2-user/openclaw && /usr/bin/docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d || /usr/local/bin/docker-compose -f docker-compose.yml -f docker-compose.aws.yml up -d"
-ExecStop=/bin/bash -c "cd /home/ec2-user/openclaw && /usr/bin/docker compose -f docker-compose.yml -f docker-compose.aws.yml down || /usr/local/bin/docker-compose -f docker-compose.yml -f docker-compose.aws.yml down"
-TimeoutStartSec=0
-User=ec2-user
-Group=ec2-user
+# Install the template as the systemd service
+if [ -f "systemd/openclaw.service.template" ]; then
+    install -m 0644 systemd/openclaw.service.template /etc/systemd/system/openclaw.service
+    log_info "Systemd service file installed from template ✓"
+else
+    log_error "Systemd template not found: systemd/openclaw.service.template"
+    exit 1
+fi
 
-[Install]
-WantedBy=multi-user.target
-EOF
-
+systemctl daemon-reexec
 systemctl daemon-reload
-systemctl enable openclaw
+systemctl enable openclaw.service
 
 log_info "systemd watchdog installed and enabled ✓"
 log_warn "Service enabled but not started yet - OpenClaw needs to be built first"
@@ -235,8 +236,16 @@ fi
 # Check Docker containers
 if docker ps | grep -q openclaw-gateway; then
     log_info "✓ OpenClaw container is running"
+    # Now that containers are running, start the systemd service
+    if ! systemctl is-active --quiet openclaw; then
+        log_info "Starting systemd service now that containers are running..."
+        systemctl start openclaw || log_warn "Service start had issues, but containers are running"
+    fi
 else
     log_warn "✗ OpenClaw container not found"
+    log_warn "OpenClaw needs to be built and configured first"
+    log_warn "Run: cd ~/openclaw && ./deploy-aws.sh (or docker-setup.sh)"
+    log_warn "Then start the service: sudo systemctl start openclaw"
     docker ps -a
 fi
 
