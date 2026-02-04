@@ -5,6 +5,22 @@
 
 set -euo pipefail
 
+#############################################
+# OpenClaw Deployment Script
+# OS-Aware Bootstrap (AL2023 Compatible)
+#############################################
+
+echo "[INFO] =========================================="
+echo "[INFO] OpenClaw OS Detection"
+echo "[INFO] =========================================="
+
+if [ -f /etc/os-release ]; then
+  . /etc/os-release
+  echo "[INFO] Detected OS: $PRETTY_NAME"
+else
+  echo "[WARN] Unable to detect OS via /etc/os-release"
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
