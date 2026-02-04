@@ -62,13 +62,25 @@ fi
 log_step "Step 2: Checking Docker..."
 
 if ! command -v docker &> /dev/null; then
-    log_info "Installing Docker..."
-    curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-    sudo sh /tmp/get-docker.sh
-    sudo usermod -aG docker "$USER"
-    sudo systemctl enable docker
-    sudo systemctl start docker
-    log_info "Docker installed. You may need to log out/in for group changes."
+    log_info "Installing Docker for Amazon Linux 2023..."
+    
+    # Amazon Linux 2023 uses dnf
+    if command -v dnf &> /dev/null; then
+        sudo dnf update -y
+        sudo dnf install -y docker docker-compose-plugin
+        sudo systemctl enable docker
+        sudo systemctl start docker
+        sudo usermod -aG docker "$USER"
+        log_info "Docker installed via dnf. You may need to log out/in for group changes."
+    else
+        # Fallback to official script for other distributions
+        curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+        sudo sh /tmp/get-docker.sh
+        sudo usermod -aG docker "$USER"
+        sudo systemctl enable docker
+        sudo systemctl start docker
+        log_info "Docker installed. You may need to log out/in for group changes."
+    fi
 else
     log_info "Docker already installed"
 fi
@@ -76,6 +88,14 @@ fi
 if ! sudo systemctl is-active --quiet docker; then
     log_info "Starting Docker service..."
     sudo systemctl start docker
+fi
+
+# Verify Docker is working
+if ! docker ps &> /dev/null; then
+    log_warn "Docker may require group membership. Trying with newgrp..."
+    newgrp docker << EOF
+docker ps
+EOF
 fi
 
 # ============================================================================
