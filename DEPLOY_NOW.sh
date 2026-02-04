@@ -62,21 +62,26 @@ log_info "Entering OpenClaw supervisor loop"
 
 while true; do
     # Check if OpenClaw containers are running
-    if ! docker ps --format '{{.Names}}' | grep -q openclaw; then
+    if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q openclaw; then
         log_warn "OpenClaw containers not running, starting..."
         
-        # Try to start containers
-        if [ -f "docker-compose.yml" ]; then
-            if command -v docker &> /dev/null && docker compose version >/dev/null 2>&1; then
-                docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d || log_error "Failed to start containers with docker compose"
-            elif command -v docker-compose &> /dev/null; then
-                docker-compose -f docker-compose.yml -f docker-compose.aws.yml up -d || log_error "Failed to start containers with docker-compose"
-            else
-                log_error "Neither 'docker compose' nor 'docker-compose' found"
-            fi
+    # Try to start containers
+    if [ -f "docker-compose.yml" ]; then
+        # Try docker compose (plugin) first
+        if docker compose version >/dev/null 2>&1; then
+            log_info "Starting containers with 'docker compose'..."
+            docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d || log_error "Failed to start containers with docker compose"
+        # Fallback to docker-compose (standalone)
+        elif command -v docker-compose >/dev/null 2>&1; then
+            log_info "Starting containers with 'docker-compose'..."
+            docker-compose -f docker-compose.yml -f docker-compose.aws.yml up -d || log_error "Failed to start containers with docker-compose"
         else
-            log_error "docker-compose.yml not found in $OPENCLAW_DIR"
+            log_error "Neither 'docker compose' nor 'docker-compose' found"
+            log_error "Please install Docker Compose"
         fi
+    else
+        log_error "docker-compose.yml not found in $OPENCLAW_DIR"
+    fi
         
         # Wait a bit and verify
         sleep 5
