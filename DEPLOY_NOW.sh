@@ -92,23 +92,43 @@ while true; do
     if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q openclaw; then
         log_warn "OpenClaw containers not running, starting..."
         
-    # Try to start containers
-    if [ -f "docker-compose.yml" ]; then
-        # Try docker compose (plugin) first
-        if docker compose version >/dev/null 2>&1; then
-            log_info "Starting containers with 'docker compose'..."
-            docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d || log_error "Failed to start containers with docker compose"
-        # Fallback to docker-compose (standalone)
-        elif command -v docker-compose >/dev/null 2>&1; then
-            log_info "Starting containers with 'docker-compose'..."
-            docker-compose -f docker-compose.yml -f docker-compose.aws.yml up -d || log_error "Failed to start containers with docker-compose"
+        # Try to start containers
+        if [ -f "docker-compose.yml" ]; then
+            # Check available memory before building
+            AVAILABLE_MEM=$(free -m | awk '/^Mem:/{print $7}')
+            if [ "$AVAILABLE_MEM" -lt 512 ]; then
+                log_warn "Low memory detected: ${AVAILABLE_MEM}MB available"
+                log_warn "Skipping container start to prevent OOM kill"
+                sleep 60
+                continue
+            fi
+            
+            # Try docker compose (plugin) first
+            if docker compose version >/dev/null 2>&1; then
+                log_info "Starting containers with 'docker compose'..."
+                # Use --build only if images don't exist to avoid memory exhaustion
+                if docker images | grep -q "openclaw"; then
+                    docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d || log_error "Failed to start containers with docker compose"
+                else
+                    log_info "Images not found, building (this may take time and memory)..."
+                    docker compose -f docker-compose.yml -f docker-compose.aws.yml up --build -d || log_error "Failed to build/start containers"
+                fi
+            # Fallback to docker-compose (standalone)
+            elif command -v docker-compose >/dev/null 2>&1; then
+                log_info "Starting containers with 'docker-compose'..."
+                if docker images | grep -q "openclaw"; then
+                    docker-compose -f docker-compose.yml -f docker-compose.aws.yml up -d || log_error "Failed to start containers with docker-compose"
+                else
+                    log_info "Images not found, building (this may take time and memory)..."
+                    docker-compose -f docker-compose.yml -f docker-compose.aws.yml up --build -d || log_error "Failed to build/start containers"
+                fi
+            else
+                log_error "Neither 'docker compose' nor 'docker-compose' found"
+                log_error "Please install Docker Compose"
+            fi
         else
-            log_error "Neither 'docker compose' nor 'docker-compose' found"
-            log_error "Please install Docker Compose"
+            log_error "docker-compose.yml not found in $OPENCLAW_DIR"
         fi
-    else
-        log_error "docker-compose.yml not found in $OPENCLAW_DIR"
-    fi
         
         # Wait a bit and verify
         sleep 5
